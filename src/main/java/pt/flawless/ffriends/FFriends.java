@@ -1,6 +1,9 @@
 package pt.flawless.ffriends;
 
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.ServicePriority;
+import pt.flawless.fapi.actionbar.FActionBar;
 import org.bukkit.plugin.java.JavaPlugin;
 import pt.flawless.fapi.database.DatabaseService;
 import pt.flawless.fapi.database.Databases;
@@ -36,6 +39,29 @@ public class FFriends extends JavaPlugin {
             FriendsMenu menu = new FriendsMenu(this, service, config, command);
             command.setMenuOpener(menu::openMain);
             getServer().getPluginManager().registerEvents(menu, this);
+
+            PrivateChats privateChats = new PrivateChats();
+            menu.setChatPartner(privateChats::partnerOf);
+            // síncrono: o menu lê o parceiro logo a seguir
+            command.setChatToggler((p, target) -> {
+                if (target == null) {
+                    privateChats.disable(p.getUniqueId());
+                    p.sendMessage(config.msg("chat-off"));
+                } else {
+                    privateChats.enable(p.getUniqueId(), target.getUniqueId());
+                    p.sendMessage(config.msg("chat-on").replace("{jogador}", target.getName()));
+                }
+            });
+            getServer().getPluginManager().registerEvents(new FriendsSessionListener(this, service, config, privateChats), this);
+            getServer().getPluginManager().registerEvents(new ChatInputListener(this, config, menu.addPrompt(), privateChats), this);
+            getServer().getScheduler().runTaskTimer(this, () -> privateChats.forEach((uuid, partner) -> {
+                Player p = Bukkit.getPlayer(uuid);
+                if (p != null) {
+                    new FActionBar(p, config.msg("chat-actionbar").replace("{jogador}", FriendsCommand.name(partner))).send();
+                }
+            }), 40L, 40L);
+            // após /reload os jogadores online não passam pelo PlayerAuthEvent
+            Bukkit.getOnlinePlayers().forEach(p -> service.load(p.getUniqueId()));
 
             repository.purgeExpired(config.requestExpireDays()).exceptionally(e -> {
                 consoleLogger.sendMessage("falha ao limpar pedidos expirados: " + e.getMessage(), EMessageTypeEnum.ERROR);
