@@ -5,7 +5,6 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.Inventory;
@@ -75,6 +74,14 @@ public class FriendsMenu implements Listener {
         final UUID friend;
         FriendHolder(UUID friend) {
             this.friend = friend;
+        }
+    }
+
+    private static final class AnswerHolder extends Holder {
+        final UUID sender;
+
+        AnswerHolder(UUID sender) {
+            this.sender = sender;
         }
     }
 
@@ -188,6 +195,18 @@ public class FriendsMenu implements Listener {
         p.openInventory(inv);
     }
 
+    private void openAnswer(Player p, UUID sender) {
+        AnswerHolder holder = new AnswerHolder(sender);
+        Inventory inv = create(holder, FInventorySize.SIZE_27,
+                config.msg("menu-answer-title").replace("{jogador}", name(sender)));
+        for (int slot = 0; slot < 27; slot++) inv.setItem(slot, item(Material.GRAY_STAINED_GLASS_PANE, " "));
+        inv.setItem(CONFIRM_HEAD_SLOT, head(sender, "§e" + name(sender), List.of()));
+        inv.setItem(CONFIRM_YES_SLOT, item(Material.LIME_CONCRETE, config.msg("menu-answer-yes")));
+        inv.setItem(CONFIRM_NO_SLOT, item(Material.RED_CONCRETE, config.msg("menu-answer-no")));
+        inv.setItem(ANSWER_BACK_SLOT, item(Material.ARROW, config.msg("menu-back")));
+        p.openInventory(inv);
+    }
+
     private void openConfirm(Player p, UUID friendId) {
         ConfirmHolder holder = new ConfirmHolder(friendId);
         Inventory inv = create(holder, FInventorySize.SIZE_27,
@@ -209,9 +228,10 @@ public class FriendsMenu implements Listener {
         int slot = e.getRawSlot();
         switch (holder) {
             case MainHolder h -> clickMain(p, h, slot);
-            case RequestsHolder h -> clickRequests(p, h, slot, e.isLeftClick(), e.isRightClick());
+            case RequestsHolder h -> clickRequests(p, h, slot);
             case FriendHolder h -> clickFriend(p, h, slot);
             case ConfirmHolder h -> clickConfirm(p, h, slot);
+            case AnswerHolder h -> clickAnswer(p, h, slot);
             default -> {
             }
         }
@@ -234,17 +254,22 @@ public class FriendsMenu implements Listener {
         }
     }
 
-    private void clickRequests(Player p, RequestsHolder h, int slot, boolean left, boolean right) {
+    private void clickRequests(Player p, RequestsHolder h, int slot) {
         if (slot == REQUESTS_BACK_SLOT) {
             openMain(p);
             return;
         }
         int i = indexOf(slot);
-        if (i < 0 || i >= h.senders.size() || !(left || right)) return;
-        // mensagens e erro a cargo do comando; o menu só reabre
-        afterCommand(p, command.answer(p, h.senders.get(i), left), () -> {
-            if (p.getOpenInventory().getTopInventory().getHolder() == h) openRequests(p);
-        });
+        if (i >= 0 && i < h.senders.size()) openAnswer(p, h.senders.get(i));
+    }
+
+    private void clickAnswer(Player p, AnswerHolder h, int slot) {
+        if (slot == CONFIRM_YES_SLOT || slot == CONFIRM_NO_SLOT) {
+            // mensagens e erro a cargo do comando; o menu só reabre
+            afterCommand(p, command.answer(p, h.sender, slot == CONFIRM_YES_SLOT), () -> openRequests(p));
+        } else if (slot == ANSWER_BACK_SLOT) {
+            openRequests(p);
+        }
     }
 
     private void clickFriend(Player p, FriendHolder h, int slot) {

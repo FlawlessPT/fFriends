@@ -98,7 +98,7 @@ public record FriendsConfig(int defaultLimit, Map<String, Integer> limits, int r
             Map.entry("menu-offline", "&7Offline"),
             Map.entry("menu-manage", "&7Clica para gerir"),
             Map.entry("menu-since", "&7Amigos desde {data}"),
-            Map.entry("menu-request-lore", "&aEsquerdo: aceitar &7| &cDireito: recusar"),
+            Map.entry("menu-request-lore", "&7Clica para responder"),
             Map.entry("menu-tpauto", "&bTeleporte automático"),
             Map.entry("menu-notify", "&eAvisos de entrada e saída"),
             Map.entry("menu-chat", "&dChat privado"),
@@ -108,7 +108,10 @@ public record FriendsConfig(int defaultLimit, Map<String, Integer> limits, int r
             Map.entry("menu-remove", "&cRemover"),
             Map.entry("menu-confirm-title", "Remover {jogador}?"),
             Map.entry("menu-confirm-yes", "&aConfirmar"),
-            Map.entry("menu-confirm-no", "&cCancelar"));
+            Map.entry("menu-confirm-no", "&cCancelar"),
+            Map.entry("menu-answer-title", "Pedido de {jogador}"),
+            Map.entry("menu-answer-yes", "&aAceitar"),
+            Map.entry("menu-answer-no", "&cRecusar"));
 
     public static FriendsConfig from(ConfigurationSection c) {
         Map<String, Integer> limits = new HashMap<>();

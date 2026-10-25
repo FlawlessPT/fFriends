@@ -28,6 +28,7 @@ final class FriendsMenuLayout {
     static final int CONFIRM_HEAD_SLOT = 4;
     static final int CONFIRM_YES_SLOT = 11;
     static final int CONFIRM_NO_SLOT = 15;
+    static final int ANSWER_BACK_SLOT = 22;
 
     private FriendsMenuLayout() {}
 
