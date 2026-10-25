@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiConsumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -75,10 +76,17 @@ public class FriendsService implements FriendsApi {
         return repository.deleteRequest(from, owner);
     }
 
+    private volatile BiConsumer<UUID, UUID> onRemoved = (a, b) -> { };
+
+    /** Chamado (fora da thread principal) depois de uma amizade ser desfeita. */
+    public void setOnRemoved(BiConsumer<UUID, UUID> onRemoved) {
+        this.onRemoved = onRemoved;
+    }
+
     /** @return {@code false} se não eram amigos */
     public CompletableFuture<Boolean> remove(UUID a, UUID b) {
         return repository.removeFriend(a, b).thenCompose(ok -> ok
-                ? reloadBoth(a, b).thenApply(v -> true)
+                ? reloadBoth(a, b).thenApply(v -> { onRemoved.accept(a, b); return true; })
                 : completedFuture(false));
     }
 

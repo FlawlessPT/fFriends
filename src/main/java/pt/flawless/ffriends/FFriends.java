@@ -17,6 +17,7 @@ import pt.flawless.ffriends.menu.FriendsMenu;
 
 import java.sql.SQLException;
 import java.util.List;
+import java.util.UUID;
 
 public class FFriends extends JavaPlugin {
     private final FConsoleLogger consoleLogger = new FConsoleLogger(this.getName());
@@ -50,6 +51,15 @@ public class FFriends extends JavaPlugin {
                 } else {
                     privateChats.enable(p.getUniqueId(), target.getUniqueId());
                     p.sendMessage(config.msg("chat-on").replace("{jogador}", target.getName()));
+                }
+            });
+            // desfazer a amizade desliga o chat privado de quem falava com o outro
+            service.setOnRemoved((a, b) -> {
+                for (UUID[] pair : new UUID[][] {{a, b}, {b, a}}) {
+                    if (privateChats.partnerOf(pair[0]).filter(pair[1]::equals).isEmpty()) continue;
+                    privateChats.disable(pair[0]);
+                    Player who = Bukkit.getPlayer(pair[0]);
+                    if (who != null) who.sendMessage(config.msg("chat-off"));
                 }
             });
             getServer().getPluginManager().registerEvents(new FriendsSessionListener(this, service, config, privateChats), this);
