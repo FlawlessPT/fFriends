@@ -174,9 +174,6 @@ public class FriendsMenu implements Listener {
         inv.setItem(GOTO_SLOT, item(Material.COMPASS, config.msg("menu-goto")));
         inv.setItem(REMOVE_SLOT, item(Material.BARRIER, config.msg("menu-remove")));
         inv.setItem(FRIEND_BACK_SLOT, item(Material.ARROW, config.msg("menu-back")));
-        for (int slot = 0; slot < FRIEND_SIZE; slot++) {
-            if (inv.getItem(slot) == null) inv.setItem(slot, item(Material.GRAY_STAINED_GLASS_PANE, " "));
-        }
         p.openInventory(inv);
     }
 
