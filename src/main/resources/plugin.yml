@@ -1,0 +1,12 @@
+name: fFriends
+main: pt.flawless.ffriends.FFriends
+version: 1.0
+api-version: '1.21'
+description: Lista de amigos
+depend: [fAPI, fDatabase]
+softdepend: [fPermissions]
+commands:
+  amigo:
+    description: Gere a tua lista de amigos
+    usage: "/amigo [add <jogador> | aceitar <jogador> | recusar <jogador> | remover <jogador> | listar | pedidos | tp <amigo> | tpauto <amigo> [on|off] | avisos <amigo> [on|off] | chat [amigo] | help]"
+    aliases: [amigos, friend, friends]

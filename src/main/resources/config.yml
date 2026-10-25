@@ -1,0 +1,15 @@
+# Limite de amigos por omissão e por grupo do fPermissions (máximo absoluto: 28)
+default-limit: 10
+limits:
+  vip: 20
+
+request-expire-days: 7
+confirm-seconds: 15
+prompt-seconds: 15
+
+tp:
+  # Mundos onde /amigo tp funciona; vazio = desligado
+  allowed-worlds: []
+
+# Preenchido nas tarefas seguintes (valores por omissão no código)
+messages: {}

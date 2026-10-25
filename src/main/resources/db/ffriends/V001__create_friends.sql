@@ -1,0 +1,16 @@
+CREATE TABLE IF NOT EXISTS ffriends_links (
+    owner   CHAR(36) CHARACTER SET ascii NOT NULL,
+    friend  CHAR(36) CHARACTER SET ascii NOT NULL,
+    since   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    tp_auto BOOLEAN NOT NULL DEFAULT FALSE,
+    notify  BOOLEAN NOT NULL DEFAULT TRUE,
+    PRIMARY KEY (owner, friend)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS ffriends_requests (
+    from_uuid CHAR(36) CHARACTER SET ascii NOT NULL,
+    to_uuid   CHAR(36) CHARACTER SET ascii NOT NULL,
+    created   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (from_uuid, to_uuid),
+    INDEX (to_uuid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
