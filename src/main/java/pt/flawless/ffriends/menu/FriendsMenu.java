@@ -73,10 +73,15 @@ public class FriendsMenu implements Listener {
 
     private static final class FriendHolder extends Holder {
         final UUID friend;
-        /** Fim da janela de confirmação do "Remover"; 0 = sem confirmação pendente. */
-        long confirmUntil;
-
         FriendHolder(UUID friend) {
+            this.friend = friend;
+        }
+    }
+
+    private static final class ConfirmHolder extends Holder {
+        final UUID friend;
+
+        ConfirmHolder(UUID friend) {
             this.friend = friend;
         }
     }
@@ -183,6 +188,17 @@ public class FriendsMenu implements Listener {
         p.openInventory(inv);
     }
 
+    private void openConfirm(Player p, UUID friendId) {
+        ConfirmHolder holder = new ConfirmHolder(friendId);
+        Inventory inv = create(holder, FInventorySize.SIZE_27,
+                config.msg("menu-confirm-title").replace("{jogador}", name(friendId)));
+        for (int slot = 0; slot < 27; slot++) inv.setItem(slot, item(Material.GRAY_STAINED_GLASS_PANE, " "));
+        inv.setItem(CONFIRM_HEAD_SLOT, head(friendId, "§e" + name(friendId), List.of()));
+        inv.setItem(CONFIRM_YES_SLOT, item(Material.LIME_CONCRETE, config.msg("menu-confirm-yes")));
+        inv.setItem(CONFIRM_NO_SLOT, item(Material.RED_CONCRETE, config.msg("menu-confirm-no")));
+        p.openInventory(inv);
+    }
+
     @EventHandler
     public void onClick(InventoryClickEvent e) {
         // top inventory nosso: cobre também shift-click/hotbar vindos do inventário do jogador
@@ -194,7 +210,8 @@ public class FriendsMenu implements Listener {
         switch (holder) {
             case MainHolder h -> clickMain(p, h, slot);
             case RequestsHolder h -> clickRequests(p, h, slot, e.isLeftClick(), e.isRightClick());
-            case FriendHolder h -> clickFriend(p, h, slot, e.getClick());
+            case FriendHolder h -> clickFriend(p, h, slot);
+            case ConfirmHolder h -> clickConfirm(p, h, slot);
             default -> {
             }
         }
@@ -230,7 +247,7 @@ public class FriendsMenu implements Listener {
         });
     }
 
-    private void clickFriend(Player p, FriendHolder h, int slot, ClickType click) {
+    private void clickFriend(Player p, FriendHolder h, int slot) {
         UUID friendId = h.friend;
         switch (slot) {
             case TPAUTO_SLOT, TPAUTO_SLOT + GLASS_OFFSET, NOTIFY_SLOT, NOTIFY_SLOT + GLASS_OFFSET -> {
@@ -264,34 +281,19 @@ public class FriendsMenu implements Listener {
                 p.closeInventory();
                 command.goTo(p, friendId);
             }
-            case REMOVE_SLOT -> {
-                // o duplo clique gera um evento extra que confirmaria logo
-                if (click != ClickType.DOUBLE_CLICK) remove(p, h);
-            }
+            case REMOVE_SLOT -> openConfirm(p, friendId);
             case FRIEND_BACK_SLOT -> openMain(p);
             default -> {
             }
         }
     }
 
-    /** Primeiro clique pede confirmação durante {@code confirm-seconds}; o segundo remove. */
-    private void remove(Player p, FriendHolder h) {
-        long now = System.currentTimeMillis();
-        if (h.confirmUntil > now) {
-            h.confirmUntil = 0;
-            afterCommand(p, command.remove(p, h.friend), () -> {
-                if (p.isOnline()) openMain(p);
-            });
-            return;
+    private void clickConfirm(Player p, ConfirmHolder h, int slot) {
+        if (slot == CONFIRM_YES_SLOT) {
+            afterCommand(p, command.remove(p, h.friend), () -> openMain(p));
+        } else if (slot == CONFIRM_NO_SLOT) {
+            openFriend(p, h.friend);
         }
-        h.confirmUntil = now + config.confirmSeconds() * 1000L;
-        h.inventory.setItem(REMOVE_SLOT, item(Material.BARRIER, config.msg("menu-remove-confirm")));
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            // um clique depois de expirar abre uma nova janela: só repor quando já não houver nenhuma
-            if (System.currentTimeMillis() >= h.confirmUntil) {
-                h.inventory.setItem(REMOVE_SLOT, item(Material.BARRIER, config.msg("menu-remove")));
-            }
-        }, config.confirmSeconds() * 20L);
     }
 
     private boolean inChatWith(Player p, UUID friendId) {
@@ -354,7 +356,7 @@ public class FriendsMenu implements Listener {
         ItemStack head = new FItemStack(Material.PLAYER_HEAD, 1, name).setLore(lore).createItem();
         SkullMeta meta = (SkullMeta) head.getItemMeta();
         meta.setOwningPlayer(Bukkit.getOfflinePlayer(uuid));
-        // o cliente mostra "Dynamic" na dica de cabeças de jogadores offline
+        // esconde o "Dynamic" que o cliente mostra na dica de cabeças de jogadores offline
         head.setItemMeta(meta);
         head.setData(io.papermc.paper.datacomponent.DataComponentTypes.TOOLTIP_DISPLAY,
                 io.papermc.paper.datacomponent.item.TooltipDisplay.tooltipDisplay()

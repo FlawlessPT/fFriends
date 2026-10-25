@@ -106,7 +106,9 @@ public record FriendsConfig(int defaultLimit, Map<String, Integer> limits, int r
             Map.entry("menu-off", "&cDesligado"),
             Map.entry("menu-goto", "&aIr ter com"),
             Map.entry("menu-remove", "&cRemover"),
-            Map.entry("menu-remove-confirm", "&cClica outra vez para confirmar"));
+            Map.entry("menu-confirm-title", "Remover {jogador}?"),
+            Map.entry("menu-confirm-yes", "&aConfirmar"),
+            Map.entry("menu-confirm-no", "&cCancelar"));
 
     public static FriendsConfig from(ConfigurationSection c) {
         Map<String, Integer> limits = new HashMap<>();
