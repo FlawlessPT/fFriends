@@ -29,6 +29,10 @@ public class FFriends extends JavaPlugin {
             FriendsService service = new FriendsService(config, repository, permissions(), getLogger());
             getServer().getServicesManager().register(FriendsApi.class, service, this, ServicePriority.Normal);
 
+            FriendsCommand command = new FriendsCommand(this, service, config);
+            getCommand("amigo").setExecutor(command);
+            getCommand("amigo").setTabCompleter(command);
+
             repository.purgeExpired(config.requestExpireDays()).exceptionally(e -> {
                 consoleLogger.sendMessage("falha ao limpar pedidos expirados: " + e.getMessage(), EMessageTypeEnum.ERROR);
                 return null;
