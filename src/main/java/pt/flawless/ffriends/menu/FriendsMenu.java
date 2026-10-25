@@ -355,8 +355,10 @@ public class FriendsMenu implements Listener {
         SkullMeta meta = (SkullMeta) head.getItemMeta();
         meta.setOwningPlayer(Bukkit.getOfflinePlayer(uuid));
         // o cliente mostra "Dynamic" na dica de cabeças de jogadores offline
-        meta.addItemFlags(org.bukkit.inventory.ItemFlag.HIDE_ADDITIONAL_TOOLTIP);
         head.setItemMeta(meta);
+        head.setData(io.papermc.paper.datacomponent.DataComponentTypes.TOOLTIP_DISPLAY,
+                io.papermc.paper.datacomponent.item.TooltipDisplay.tooltipDisplay()
+                        .addHiddenComponents(io.papermc.paper.datacomponent.DataComponentTypes.PROFILE).build());
         return head;
     }
 }
