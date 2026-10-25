@@ -354,6 +354,8 @@ public class FriendsMenu implements Listener {
         ItemStack head = new FItemStack(Material.PLAYER_HEAD, 1, name).setLore(lore).createItem();
         SkullMeta meta = (SkullMeta) head.getItemMeta();
         meta.setOwningPlayer(Bukkit.getOfflinePlayer(uuid));
+        // o cliente mostra "Dynamic" na dica de cabeças de jogadores offline
+        meta.addItemFlags(org.bukkit.inventory.ItemFlag.HIDE_ADDITIONAL_TOOLTIP);
         head.setItemMeta(meta);
         return head;
     }
