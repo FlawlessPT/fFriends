@@ -74,8 +74,8 @@ public record FriendsConfig(int defaultLimit, Map<String, Integer> limits, int r
             Map.entry("tpauto-off", "&7Teleporte automático desligado para {jogador}."),
             Map.entry("notify-on", "&aAvisos de {jogador} ligados."),
             Map.entry("notify-off", "&7Avisos de {jogador} desligados."),
-            Map.entry("friend-join", "&a{jogador} &7entrou no servidor."),
-            Map.entry("friend-quit", "&c{jogador} &7saiu do servidor."),
+            Map.entry("friend-join", "&7O teu amigo &a{jogador} &7acabou de entrar."),
+            Map.entry("friend-quit", "&7O teu amigo &c{jogador} &7acabou de sair."),
             // chat privado
             Map.entry("chat-on", "&dChat privado com {jogador} ligado. Usa &f/amigo chat &dpara sair."),
             Map.entry("chat-off", "&7Chat privado desligado."),
