@@ -1,12 +1,11 @@
 package pt.flawless.ffriends;
 
-import io.papermc.paper.event.player.AsyncChatEvent;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
 import pt.flawless.ffriends.menu.AddPrompt;
 
 import java.util.Optional;
@@ -28,20 +27,22 @@ public class ChatInputListener implements Listener {
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
-    public void onPrompt(AsyncChatEvent e) {
+    public void onPrompt(AsyncPlayerChatEvent e) {
         Player p = e.getPlayer();
         if (!addPrompt.isPrompting(p.getUniqueId())) return;
         e.setCancelled(true);
-        String text = PlainTextComponentSerializer.plainText().serialize(e.message());
+        String text = e.getMessage();
         try {
-            Bukkit.getScheduler().runTask(plugin, () -> addPrompt.handle(p, text));
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                if (p.isOnline()) addPrompt.handle(p, text);
+            });
         } catch (RuntimeException ignored) {
             // plugin a desligar
         }
     }
 
     @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
-    public void onPrivate(AsyncChatEvent e) {
+    public void onPrivate(AsyncPlayerChatEvent e) {
         Player p = e.getPlayer();
         Optional<UUID> partner = privateChats.partnerOf(p.getUniqueId());
         if (partner.isEmpty()) return;
@@ -50,10 +51,20 @@ public class ChatInputListener implements Listener {
         Player target = Bukkit.getPlayer(partner.get());
         if (target == null) {
             privateChats.disable(p.getUniqueId());
-            p.sendMessage(config.msg("chat-partner-left").replace("{jogador}", FriendsCommand.name(partner.get())));
+            UUID partnerId = partner.get();
+            try {
+                // o nome offline resolve-se na thread principal
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    if (p.isOnline()) {
+                        p.sendMessage(config.msg("chat-partner-left").replace("{jogador}", FriendsCommand.name(partnerId)));
+                    }
+                });
+            } catch (RuntimeException ignored) {
+                // plugin a desligar
+            }
             return;
         }
-        String text = PlainTextComponentSerializer.plainText().serialize(e.message());
+        String text = e.getMessage();
         p.sendMessage(config.msg("private-sent").replace("{jogador}", target.getName()).replace("{mensagem}", text));
         target.sendMessage(config.msg("private-received").replace("{jogador}", p.getName()).replace("{mensagem}", text));
     }
