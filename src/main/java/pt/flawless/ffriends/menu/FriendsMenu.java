@@ -5,6 +5,7 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.Inventory;
@@ -193,7 +194,7 @@ public class FriendsMenu implements Listener {
         switch (holder) {
             case MainHolder h -> clickMain(p, h, slot);
             case RequestsHolder h -> clickRequests(p, h, slot, e.isLeftClick(), e.isRightClick());
-            case FriendHolder h -> clickFriend(p, h, slot);
+            case FriendHolder h -> clickFriend(p, h, slot, e.getClick());
             default -> {
             }
         }
@@ -229,7 +230,7 @@ public class FriendsMenu implements Listener {
         });
     }
 
-    private void clickFriend(Player p, FriendHolder h, int slot) {
+    private void clickFriend(Player p, FriendHolder h, int slot, ClickType click) {
         UUID friendId = h.friend;
         switch (slot) {
             case TPAUTO_SLOT, TPAUTO_SLOT + GLASS_OFFSET, NOTIFY_SLOT, NOTIFY_SLOT + GLASS_OFFSET -> {
@@ -263,7 +264,10 @@ public class FriendsMenu implements Listener {
                 p.closeInventory();
                 command.goTo(p, friendId);
             }
-            case REMOVE_SLOT -> remove(p, h);
+            case REMOVE_SLOT -> {
+                // o duplo clique gera um evento extra que confirmaria logo
+                if (click != ClickType.DOUBLE_CLICK) remove(p, h);
+            }
             case FRIEND_BACK_SLOT -> openMain(p);
             default -> {
             }
@@ -274,6 +278,7 @@ public class FriendsMenu implements Listener {
     private void remove(Player p, FriendHolder h) {
         long now = System.currentTimeMillis();
         if (h.confirmUntil > now) {
+            h.confirmUntil = 0;
             afterCommand(p, command.remove(p, h.friend), () -> {
                 if (p.isOnline()) openMain(p);
             });

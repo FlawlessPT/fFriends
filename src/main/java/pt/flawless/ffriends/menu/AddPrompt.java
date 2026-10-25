@@ -7,11 +7,11 @@ import pt.flawless.ffriends.FriendsCommand;
 import pt.flawless.ffriends.FriendsConfig;
 import pt.flawless.ffriends.FriendsService.AddResult;
 
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 /** "Adicionar amigo" do menu: o próximo texto no chat é o nome. Só thread principal; o listener de chat chama {@link #handle}. */
@@ -21,8 +21,8 @@ public class AddPrompt {
     private final FriendsConfig config;
     private final FriendsCommand command;
     private final Consumer<Player> onAdded;
-    /** Jogador -> instante em que o prompt expira. */
-    private final Map<UUID, Long> prompts = new HashMap<>();
+    /** Jogador -> instante em que o prompt expira. Concorrente: {@link #isPrompting} corre no chat assíncrono. */
+    private final Map<UUID, Long> prompts = new ConcurrentHashMap<>();
     private final Set<UUID> busy = new HashSet<>();
 
     AddPrompt(Plugin plugin, FriendsConfig config, FriendsCommand command, Consumer<Player> onAdded) {
