@@ -13,6 +13,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.plugin.Plugin;
 import pt.flawless.fapi.enums.FInventorySize;
+import pt.flawless.fapi.inventory.ConfirmMenu;
 import pt.flawless.fapi.inventory.FInventory;
 import pt.flawless.fapi.items.FItemStack;
 import pt.flawless.ffriends.Friend;
@@ -73,22 +74,6 @@ public class FriendsMenu implements Listener {
     private static final class FriendHolder extends Holder {
         final UUID friend;
         FriendHolder(UUID friend) {
-            this.friend = friend;
-        }
-    }
-
-    private static final class AnswerHolder extends Holder {
-        final UUID sender;
-
-        AnswerHolder(UUID sender) {
-            this.sender = sender;
-        }
-    }
-
-    private static final class ConfirmHolder extends Holder {
-        final UUID friend;
-
-        ConfirmHolder(UUID friend) {
             this.friend = friend;
         }
     }
@@ -196,26 +181,23 @@ public class FriendsMenu implements Listener {
     }
 
     private void openAnswer(Player p, UUID sender) {
-        AnswerHolder holder = new AnswerHolder(sender);
-        Inventory inv = create(holder, FInventorySize.SIZE_27,
-                config.msg("menu-answer-title").replace("{jogador}", name(sender)));
-        for (int slot = 0; slot < 27; slot++) inv.setItem(slot, item(Material.GRAY_STAINED_GLASS_PANE, " "));
-        inv.setItem(CONFIRM_HEAD_SLOT, head(sender, "§e" + name(sender), List.of()));
-        inv.setItem(CONFIRM_YES_SLOT, item(Material.LIME_CONCRETE, config.msg("menu-answer-yes")));
-        inv.setItem(CONFIRM_NO_SLOT, item(Material.RED_CONCRETE, config.msg("menu-answer-no")));
-        inv.setItem(ANSWER_BACK_SLOT, item(Material.ARROW, config.msg("menu-back")));
-        p.openInventory(inv);
+        ConfirmMenu.open(p, config.msg("menu-answer-title").replace("{jogador}", name(sender)),
+                head(sender, "§e" + name(sender), List.of()),
+                new ConfirmMenu.Button(Material.LIME_CONCRETE, config.msg("menu-answer-yes"),
+                        // mensagens e erro a cargo do comando; o menu só reabre
+                        x -> afterCommand(p, command.answer(p, sender, true), () -> openRequests(p))),
+                new ConfirmMenu.Button(Material.RED_CONCRETE, config.msg("menu-answer-no"),
+                        x -> afterCommand(p, command.answer(p, sender, false), () -> openRequests(p))),
+                new ConfirmMenu.Button(Material.ARROW, config.msg("menu-back"), x -> openRequests(p)));
     }
 
     private void openConfirm(Player p, UUID friendId) {
-        ConfirmHolder holder = new ConfirmHolder(friendId);
-        Inventory inv = create(holder, FInventorySize.SIZE_27,
-                config.msg("menu-confirm-title").replace("{jogador}", name(friendId)));
-        for (int slot = 0; slot < 27; slot++) inv.setItem(slot, item(Material.GRAY_STAINED_GLASS_PANE, " "));
-        inv.setItem(CONFIRM_HEAD_SLOT, head(friendId, "§e" + name(friendId), List.of()));
-        inv.setItem(CONFIRM_YES_SLOT, item(Material.LIME_CONCRETE, config.msg("menu-confirm-yes")));
-        inv.setItem(CONFIRM_NO_SLOT, item(Material.RED_CONCRETE, config.msg("menu-confirm-no")));
-        p.openInventory(inv);
+        ConfirmMenu.open(p, config.msg("menu-confirm-title").replace("{jogador}", name(friendId)),
+                head(friendId, "§e" + name(friendId), List.of()),
+                new ConfirmMenu.Button(Material.LIME_CONCRETE, config.msg("menu-confirm-yes"),
+                        x -> afterCommand(p, command.remove(p, friendId), () -> openMain(p))),
+                new ConfirmMenu.Button(Material.RED_CONCRETE, config.msg("menu-confirm-no"),
+                        x -> openFriend(p, friendId)));
     }
 
     @EventHandler
@@ -230,8 +212,6 @@ public class FriendsMenu implements Listener {
             case MainHolder h -> clickMain(p, h, slot);
             case RequestsHolder h -> clickRequests(p, h, slot);
             case FriendHolder h -> clickFriend(p, h, slot);
-            case ConfirmHolder h -> clickConfirm(p, h, slot);
-            case AnswerHolder h -> clickAnswer(p, h, slot);
             default -> {
             }
         }
@@ -261,15 +241,6 @@ public class FriendsMenu implements Listener {
         }
         int i = indexOf(slot);
         if (i >= 0 && i < h.senders.size()) openAnswer(p, h.senders.get(i));
-    }
-
-    private void clickAnswer(Player p, AnswerHolder h, int slot) {
-        if (slot == CONFIRM_YES_SLOT || slot == CONFIRM_NO_SLOT) {
-            // mensagens e erro a cargo do comando; o menu só reabre
-            afterCommand(p, command.answer(p, h.sender, slot == CONFIRM_YES_SLOT), () -> openRequests(p));
-        } else if (slot == ANSWER_BACK_SLOT) {
-            openRequests(p);
-        }
     }
 
     private void clickFriend(Player p, FriendHolder h, int slot) {
@@ -310,14 +281,6 @@ public class FriendsMenu implements Listener {
             case FRIEND_BACK_SLOT -> openMain(p);
             default -> {
             }
-        }
-    }
-
-    private void clickConfirm(Player p, ConfirmHolder h, int slot) {
-        if (slot == CONFIRM_YES_SLOT) {
-            afterCommand(p, command.remove(p, h.friend), () -> openMain(p));
-        } else if (slot == CONFIRM_NO_SLOT) {
-            openFriend(p, h.friend);
         }
     }
 

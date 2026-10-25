@@ -25,10 +25,6 @@ final class FriendsMenuLayout {
     static final int GOTO_SLOT = 29;
     static final int FRIEND_BACK_SLOT = 31;
     static final int REMOVE_SLOT = 33;
-    static final int CONFIRM_HEAD_SLOT = 4;
-    static final int CONFIRM_YES_SLOT = 11;
-    static final int CONFIRM_NO_SLOT = 15;
-    static final int ANSWER_BACK_SLOT = 22;
 
     private FriendsMenuLayout() {}
 
