@@ -10,7 +10,6 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
-import pt.flawless.fapi.ranks.Ranks;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -102,7 +101,13 @@ public class FriendsCommand implements CommandExecutor, TabCompleter {
             p.sendMessage(config.msg("player-not-found"));
             return;
         }
-        run(p, service.request(p.getUniqueId(), target.getUniqueId()), result -> {
+        add(p, target);
+    }
+
+    /** Envia o pedido e mostra as mensagens; partilhado com o menu. */
+    public CompletableFuture<FriendsService.AddResult> add(Player p, Player target) {
+        CompletableFuture<FriendsService.AddResult> future = service.request(p.getUniqueId(), target.getUniqueId());
+        run(p, future, result -> {
             switch (result) {
                 case SENT -> {
                     p.sendMessage(msg("request-sent", target.getName()));
@@ -119,6 +124,7 @@ public class FriendsCommand implements CommandExecutor, TabCompleter {
                 case TARGET_FULL -> p.sendMessage(msg("limit-other", target.getName()));
             }
         });
+        return future;
     }
 
     private void answer(Player p, String[] args, boolean accept) {
@@ -134,26 +140,32 @@ public class FriendsCommand implements CommandExecutor, TabCompleter {
                 p.sendMessage(msg("no-request", args[1]));
                 return;
             }
-            UUID id = from.get();
-            String name = name(id);
-            Player other = Bukkit.getPlayer(id);
-            if (accept) {
-                run(p, service.accept(p.getUniqueId(), id), result -> {
-                    switch (result) {
-                        case OK -> {
-                            p.sendMessage(msg("now-friends", name));
-                            if (other != null) other.sendMessage(msg("now-friends", p.getName()));
-                        }
-                        case NO_REQUEST -> p.sendMessage(msg("no-request", name));
-                        case SELF_FULL -> limitSelf(p);
-                        case OTHER_FULL -> p.sendMessage(msg("limit-other", name));
-                    }
-                });
-            } else {
-                run(p, service.decline(p.getUniqueId(), id), ok ->
-                        p.sendMessage(ok ? msg("declined", name) : msg("no-request", name)));
+            answer(p, from.get(), accept);
+        });
+    }
+
+    /** Aceita ou recusa o pedido de {@code id} e mostra as mensagens; partilhado com o menu. */
+    public CompletableFuture<?> answer(Player p, UUID id, boolean accept) {
+        String name = name(id);
+        if (!accept) {
+            CompletableFuture<Boolean> future = service.decline(p.getUniqueId(), id);
+            run(p, future, ok -> p.sendMessage(ok ? msg("declined", name) : msg("no-request", name)));
+            return future;
+        }
+        CompletableFuture<FriendsService.AcceptResult> future = service.accept(p.getUniqueId(), id);
+        run(p, future, result -> {
+            switch (result) {
+                case OK -> {
+                    p.sendMessage(msg("now-friends", name));
+                    Player other = Bukkit.getPlayer(id);
+                    if (other != null) other.sendMessage(msg("now-friends", p.getName()));
+                }
+                case NO_REQUEST -> p.sendMessage(msg("no-request", name));
+                case SELF_FULL -> limitSelf(p);
+                case OTHER_FULL -> p.sendMessage(msg("limit-other", name));
             }
         });
+        return future;
     }
 
     private void remove(Player p, String[] args) {
@@ -176,8 +188,15 @@ public class FriendsCommand implements CommandExecutor, TabCompleter {
             return;
         }
         removals.remove(p.getUniqueId());
-        run(p, service.remove(p.getUniqueId(), id), ok ->
-                p.sendMessage(ok ? msg("removed", name) : msg("not-friend", name)));
+        remove(p, id);
+    }
+
+    /** Remove já, sem confirmação (o menu tem a sua); mostra as mensagens. */
+    public CompletableFuture<Boolean> remove(Player p, UUID id) {
+        String name = name(id);
+        CompletableFuture<Boolean> future = service.remove(p.getUniqueId(), id);
+        run(p, future, ok -> p.sendMessage(ok ? msg("removed", name) : msg("not-friend", name)));
+        return future;
     }
 
     private void list(Player p) {
@@ -189,7 +208,7 @@ public class FriendsCommand implements CommandExecutor, TabCompleter {
         List<UUID> sorted = new ArrayList<>(friends.keySet());
         sorted.sort(Comparator.<UUID, Boolean>comparing(u -> Bukkit.getPlayer(u) == null)
                 .thenComparing(u -> name(u).toLowerCase(Locale.ROOT)));
-        List<CompletableFuture<String>> labels = sorted.stream().map(this::rankLabel).toList();
+        List<CompletableFuture<String>> labels = sorted.stream().map(service::rankLabel).toList();
         run(p, CompletableFuture.allOf(labels.toArray(CompletableFuture[]::new)), v -> {
             p.sendMessage(config.msg("list-header").replace("{n}", String.valueOf(sorted.size())));
             for (int i = 0; i < sorted.size(); i++) {
@@ -199,15 +218,6 @@ public class FriendsCommand implements CommandExecutor, TabCompleter {
                 p.sendMessage(label.isEmpty() ? line : label + " " + line);
             }
         });
-    }
-
-    /** Rank do fRankup, ou vazio se o plugin não existir ou falhar. */
-    private CompletableFuture<String> rankLabel(UUID uuid) {
-        try {
-            return Ranks.get().getRankLabel(uuid).exceptionally(e -> "");
-        } catch (RuntimeException e) {
-            return CompletableFuture.completedFuture("");
-        }
     }
 
     private void requests(Player p) {
@@ -242,17 +252,17 @@ public class FriendsCommand implements CommandExecutor, TabCompleter {
             p.sendMessage(msg("not-friend", args[1]));
             return;
         }
-        Player target = Bukkit.getPlayer(friend.get());
+        goTo(p, friend.get());
+    }
+
+    /** Lógica do {@code /amigo tp}, partilhada com o botão "Ir ter com" do menu. */
+    public void goTo(Player p, UUID friend) {
+        Player target = Bukkit.getPlayer(friend);
         if (target == null) {
-            p.sendMessage(msg("friend-offline", name(friend.get())));
+            p.sendMessage(msg("friend-offline", name(friend)));
             return;
         }
-        if (service.canAutoTp(target.getUniqueId(), p.getUniqueId())) {
-            p.teleport(target.getLocation());
-            p.sendMessage(msg("tp-done", target.getName()));
-        } else {
-            p.performCommand("tpa " + target.getName());
-        }
+        if (service.teleportOrRequest(p, target)) p.sendMessage(msg("tp-done", target.getName()));
     }
 
     /** {@code tpauto} (true) ou {@code avisos} (false): [on|off] opcional, sem ele alterna. */
@@ -279,16 +289,23 @@ public class FriendsCommand implements CommandExecutor, TabCompleter {
         } else {
             value = !(tpAuto ? current.tpAuto() : current.notifyEnabled());
         }
+        setOption(p, id, tpAuto, value);
+    }
+
+    /** Muda o tp automático (true) ou os avisos (false) e mostra a mensagem; partilhado com o menu. */
+    public CompletableFuture<Boolean> setOption(Player p, UUID id, boolean tpAuto, boolean value) {
         String name = name(id);
-        run(p, tpAuto ? service.setTpAuto(p.getUniqueId(), id, value) : service.setNotify(p.getUniqueId(), id, value),
-                ok -> {
-                    if (!ok) {
-                        p.sendMessage(msg("not-friend", name));
-                        return;
-                    }
-                    String key = (tpAuto ? "tpauto-" : "notify-") + (value ? "on" : "off");
-                    p.sendMessage(msg(key, name));
-                });
+        CompletableFuture<Boolean> future = tpAuto
+                ? service.setTpAuto(p.getUniqueId(), id, value) : service.setNotify(p.getUniqueId(), id, value);
+        run(p, future, ok -> {
+            if (!ok) {
+                p.sendMessage(msg("not-friend", name));
+                return;
+            }
+            String key = (tpAuto ? "tpauto-" : "notify-") + (value ? "on" : "off");
+            p.sendMessage(msg(key, name));
+        });
+        return future;
     }
 
     private void chat(Player p, String[] args) {
@@ -301,7 +318,7 @@ public class FriendsCommand implements CommandExecutor, TabCompleter {
             return;
         }
         if (args.length == 1) {
-            chatToggler.accept(p, null);
+            toggleChat(p, null);
             return;
         }
         Optional<UUID> friend = friendByName(p, args[1]);
@@ -314,7 +331,13 @@ public class FriendsCommand implements CommandExecutor, TabCompleter {
             p.sendMessage(msg("friend-offline", name(friend.get())));
             return;
         }
-        chatToggler.accept(p, target);
+        toggleChat(p, target);
+    }
+
+    /** Liga o chat privado com {@code target}, ou desliga com {@code null}; partilhado com o menu. */
+    public void toggleChat(Player p, Player target) {
+        if (chatToggler == null) p.sendMessage(config.msg("menu-unavailable"));
+        else chatToggler.accept(p, target);
     }
 
     private void help(Player p) {
@@ -329,7 +352,7 @@ public class FriendsCommand implements CommandExecutor, TabCompleter {
         if (args.length == 2) {
             switch (sub) {
                 case "remover", "tp", "tpauto", "avisos", "chat" -> {
-                    return filter(service.friendsOf(p.getUniqueId()).keySet().stream().map(this::name).toList(), args[1]);
+                    return filter(service.friendsOf(p.getUniqueId()).keySet().stream().map(FriendsCommand::name).toList(), args[1]);
                 }
                 case "add" -> {
                     Map<UUID, Friend> friends = service.friendsOf(p.getUniqueId());
@@ -363,7 +386,8 @@ public class FriendsCommand implements CommandExecutor, TabCompleter {
                 .filter(u -> name(u).equalsIgnoreCase(name)).findFirst();
     }
 
-    private String name(UUID uuid) {
+    /** Nome conhecido do jogador (sem lookup); o UUID se o servidor nunca o viu. */
+    public static String name(UUID uuid) {
         OfflinePlayer o = Bukkit.getOfflinePlayer(uuid);
         return o.getName() != null ? o.getName() : uuid.toString();
     }

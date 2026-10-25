@@ -97,6 +97,7 @@ public record FriendsConfig(int defaultLimit, Map<String, Integer> limits, int r
             Map.entry("menu-online", "&aOnline"),
             Map.entry("menu-offline", "&7Offline"),
             Map.entry("menu-manage", "&7Clica para gerir"),
+            Map.entry("menu-since", "&7Amigos desde {data}"),
             Map.entry("menu-request-lore", "&aEsquerdo: aceitar &7| &cDireito: recusar"),
             Map.entry("menu-tpauto", "&bTeleporte automático"),
             Map.entry("menu-notify", "&eAvisos de entrada e saída"),

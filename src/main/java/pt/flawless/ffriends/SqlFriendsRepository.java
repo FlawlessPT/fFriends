@@ -6,6 +6,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -17,7 +18,7 @@ import java.util.concurrent.CompletableFuture;
  */
 public class SqlFriendsRepository implements FriendsRepository {
 
-    private static final String SELECT_FRIENDS = "SELECT friend, tp_auto, notify FROM ffriends_links WHERE owner = ?";
+    private static final String SELECT_FRIENDS = "SELECT friend, tp_auto, notify, since FROM ffriends_links WHERE owner = ?";
     private static final String SELECT_REQUESTS_TO = "SELECT from_uuid, created FROM ffriends_requests "
             + "WHERE to_uuid = ? AND created > NOW() - INTERVAL ? DAY ORDER BY created";
     private static final String DELETE_EXPIRED_PAIR = "DELETE FROM ffriends_requests "
@@ -51,7 +52,9 @@ public class SqlFriendsRepository implements FriendsRepository {
                 try (ResultSet rs = ps.executeQuery()) {
                     List<Friend> friends = new ArrayList<>();
                     while (rs.next()) {
-                        friends.add(new Friend(UUID.fromString(rs.getString(1)), rs.getBoolean(2), rs.getBoolean(3)));
+                        Timestamp since = rs.getTimestamp(4);
+                        friends.add(new Friend(UUID.fromString(rs.getString(1)), rs.getBoolean(2), rs.getBoolean(3),
+                                since == null ? null : since.toInstant()));
                     }
                     return friends;
                 }

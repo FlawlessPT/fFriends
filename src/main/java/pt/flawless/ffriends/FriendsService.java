@@ -4,6 +4,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import pt.flawless.fapi.friends.FriendsApi;
 import pt.flawless.fapi.permissions.PermissionsApi;
+import pt.flawless.fapi.ranks.Ranks;
 
 import java.util.List;
 import java.util.Map;
@@ -147,6 +148,28 @@ public class FriendsService implements FriendsApi {
         if (friend == null || !friend.tpAuto()) return false;
         Player player = Bukkit.getPlayer(target);
         return player != null && config.allowedWorlds().contains(player.getWorld().getName());
+    }
+
+    /**
+     * Teleporta {@code player} até {@code target} se este lhe deu tp automático; senão faz {@code /tpa}.
+     * Thread principal. @return {@code true} se teleportou já
+     */
+    public boolean teleportOrRequest(Player player, Player target) {
+        if (canAutoTp(target.getUniqueId(), player.getUniqueId())) {
+            player.teleport(target.getLocation());
+            return true;
+        }
+        player.performCommand("tpa " + target.getName());
+        return false;
+    }
+
+    /** Rank do fRankup, ou vazio se o plugin não existir ou falhar. */
+    public CompletableFuture<String> rankLabel(UUID uuid) {
+        try {
+            return Ranks.get().getRankLabel(uuid).exceptionally(e -> "");
+        } catch (RuntimeException e) {
+            return completedFuture("");
+        }
     }
 
     private CompletableFuture<Boolean> afterOption(UUID owner, boolean ok) {

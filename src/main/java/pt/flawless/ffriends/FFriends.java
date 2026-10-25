@@ -10,6 +10,7 @@ import pt.flawless.fapi.logs.FConsoleLogger;
 import pt.flawless.fapi.permissions.Permissions;
 import pt.flawless.fapi.permissions.PermissionsApi;
 import pt.flawless.fapi.permissions.PermissionsUnavailableException;
+import pt.flawless.ffriends.menu.FriendsMenu;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -32,6 +33,9 @@ public class FFriends extends JavaPlugin {
             FriendsCommand command = new FriendsCommand(this, service, config);
             getCommand("amigo").setExecutor(command);
             getCommand("amigo").setTabCompleter(command);
+            FriendsMenu menu = new FriendsMenu(this, service, config, command);
+            command.setMenuOpener(menu::openMain);
+            getServer().getPluginManager().registerEvents(menu, this);
 
             repository.purgeExpired(config.requestExpireDays()).exceptionally(e -> {
                 consoleLogger.sendMessage("falha ao limpar pedidos expirados: " + e.getMessage(), EMessageTypeEnum.ERROR);
