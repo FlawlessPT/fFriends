@@ -10,3 +10,5 @@
 - Após `/reload`, o onEnable carrega todos os online, mesmo os ainda não autenticados no fAuth (que não suporta `/reload`).
 - Tab-complete de `aceitar`/`recusar` sem nomes (pedidos são consulta assíncrona).
 - Chat privado unidirecional: só fala em privado quem o ligou.
+
+- Reload de config exige `/freload plugin` (o `FriendsConfig` é partilhado por serviço, menu, comandos e listeners).
